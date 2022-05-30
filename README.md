@@ -2,6 +2,12 @@
 
 Tools for running and enforcing a server intended for beginners.
 
+MADE FOR ATTRITION
+
+In theory, could be tuned for any mode, but testing and presets have been entirely based around attrition.
+
+The default mod.json is for Novice level, to use intermediate, rename the second .json file and delete/rename the first. If you want to use convars, or tweak the settings of the mod, convar names and explanations can be found inside the mod.json file.
+
 ## Banhammer
 
 The main feature of this mod. The banhammer is a tool that kicks or bans players it evaluates to be too skilled for the server. The banhammer can be extensively tuned, but I recommend using one of the included presets, and including which one you are running in the server name. This way people will find beginner servers interchangeable, and know what type of skill level to expect.
