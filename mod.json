@@ -1,0 +1,90 @@
+{
+   "Name": "MentalEdge.BeginnerServer",
+   "Description": "Tools for running a northstar server for beginners",
+   "LoadPriority": 2,
+   "RequiredOnClient": false,
+   "Version": "1.0.0",
+
+   "ConVars": [
+      {
+         "Name": "bs_chat_tips",
+         "DefaultValue": "1" // If set to 1, the server will occasionally provide random titanfall tips in the chat. You can add your own tips in the respective .nut file. (and remove some that might be specific to my servers)
+      },
+      {
+         "Name": "bs_banhammer",
+         "DefaultValue": "1" // Set to 1 to enable the banhammer. The banhammer is a tool that kicks or bans players it evaluates to be too skilled for the server. The banhammer can be extensively tuned, but I recommend using one of the included presets, and including which one you are running in the server name. This way people will find beginner servers interchangeable, and know what type of skill level to expect.
+      },
+      {
+         "Name": "bs_statscollector",
+         "DefaultValue": "0" // Set to 1 to enable the statscollector. The statcollector posts the stats of each player into the logs every ten seconds. This is used to collect statistical data for tuning the banhammer. Leave disabled unless you are a data geek.
+      },
+      {
+         "Name": "bs_kill_limit",
+         "DefaultValue": "15" // Kill limit. The amount of kills needed to ascend pilots, ban or kick them, because they are skilled enough that they should move on to normal servers. Crossing this limit will still allow finishing the match. The player will even get a congratulatory message at the end.
+      },
+      {
+         "Name": "bs_kd_limit",
+         "DefaultValue": "2.0" // KD limit. The minimum KD needed for pilots to become ascended. Note that neither limit alone is enough for an ascension, both conditions have to be met for a pilot to ascend.
+      },
+      {
+         "Name": "bs_stompkill_limit",
+         "DefaultValue": "24" // A limit at which pilots will be banned, unless at a KD close to 1.0. Use to remove veterans stomping on the server. The mod will also ban someone mid-game, who is on track to achieve this killcount by the end of the match, though it errs on the side of caution in these cases.
+      },
+      {
+         "Name": "bs_stompkd_limit",
+         "DefaultValue": "3.0" // A hardish limit at which pilots will be banned mid-match. Unlike the ascension limit, if either this or the killcount condition is met, a ban is issued. The mod will allow early game KD to spike above this limit, but as more kills and deaths are accrued and the KD of pilot hence becomes more accurate, it will activate closer to this treshold.
+      },
+      {
+         "Name": "bs_kd_maxspike",
+         "DefaultValue": "14" // The maximum KD spike allowed early-game, as KD calculation is less accurate at the beginning of a match. Increase to reduce false positives, reduce to ban potential stompers earlier. Note that this value will reduce as the match goes on (though not for players than join late-game), and the treshold where the banhammer will activate will approach the hard limit configured above.
+      },
+      {
+         "Name": "bs_minimumkills",
+         "DefaultValue": "8" // Minimum number of kills required before any banhammer action. Increase this to reduce early game or mid game join false positives.
+      },
+      {
+         "Name": "bs_assistratio",
+         "DefaultValue": "0.6" // Assist ratio treshold (Assists/Kills), for the banhammer to act, a player has to be below it. This reduces false positives as high skill players generally get the kills they go for, and therefore have few assists. Increase for more bans, reduce for less.
+      },
+      {
+         "Name": "bs_stomptitankill_limit",
+         "DefaultValue": "0" // Minimum amount of titan kills required for a stomper ban. Reduces false positives.
+      },
+      {
+         "Name": "bs_ascendtitankill_limit",
+         "DefaultValue": "1" // Minimum amount of titan kills required for an ascension. Lets an othewise skilled player stick around and practice, if they don't quite have titans figured out yet.
+      },
+      {
+         "Name": "bs_ban_ascended",
+         "DefaultValue": "0" // Whether to ban ascended players, if set to 1, ascended players are banned at the ends of matches, If set to 0, they will merely be kicked instead of banned.
+      },
+      {
+         "Name": "bs_ban_stompers",
+         "DefaultValue": "1" // Whether to ban stompers, if set to 1, stompers are instabanned when detected. If set to 0, they will merely be kicked instead of banned.
+      }
+   ],
+
+   "Scripts": [
+      {
+         "Path": "banhammer.nut",
+         "RunOn": "( SERVER ) && MP",
+         "ServerCallback": {
+            "After": "BanHammerInit"
+         }
+      },
+      {
+         "Path": "chattips.nut",
+         "RunOn": "( SERVER ) && MP",
+         "ServerCallback": {
+            "After": "TipsInit"
+         }
+      },
+      {
+         "Path": "statscollector.nut",
+         "RunOn": "( SERVER ) && MP",
+         "ServerCallback": {
+            "After": "StatsInit"
+         }
+      }
+   ]
+}
