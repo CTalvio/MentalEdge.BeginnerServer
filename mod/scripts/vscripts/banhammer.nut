@@ -72,7 +72,7 @@ enum eSkillState
 }
 
 
-float function GetMatchProgress(){ // Calculate and return the progress of the match as a value between zero and one, either based on score or time, whichever has progressed further
+float function GetMatchProgress(){
     float tempScoreProgress1 = 1.0 * GameRules_GetTeamScore2(TEAM_IMC) / scoreLimit
     float tempScoreProgress2 = 1.0 * GameRules_GetTeamScore2(TEAM_MILITIA) / scoreLimit
     float timeProgressLeft = 1.0 * GameTime_TimeLeftSeconds() / matchDuration
@@ -101,7 +101,7 @@ float function GetPlayerKDLimit( entity player ){  // Get a players unique KD sp
 }
 
 
-int function GetSkillState( entity player ){  // Determine and return the current skill bracket of a player
+int function GetSkillState( entity player ){  // determine and return the current skill bracket of a player
     float tempkills = 1.0 * player.GetPlayerGameStat(PGS_KILLS)
     float tempdeaths = 1.0 * player.GetPlayerGameStat(PGS_DEATHS)
     float tempassistratio = player.GetPlayerGameStat(PGS_ASSISTS) / tempkills
@@ -134,7 +134,7 @@ int function GetSkillState( entity player ){  // Determine and return the curren
     else if( tempkills >= killsClose && tempkd > kdClose && tempassistratio < assistRatioLimit ){
         return eSkillState.CLOSE
     }
-    else if( tempkd > kdLimit ){
+    else if( tempkd > stompKdClose ){
         return eSkillState.GOOD
     }
     //mark the rest as noob
@@ -142,7 +142,7 @@ int function GetSkillState( entity player ){  // Determine and return the curren
 }
 
 
-string function GetSkillStats( entity player ){ // Return a players stats as a string
+string function ReturnSkillStats( entity player ){ // Return a players stats as a string
     float tempkills = 1.0 * player.GetPlayerGameStat(PGS_KILLS)
     float tempdeaths = 1.0 * player.GetPlayerGameStat(PGS_DEATHS)
     float tempkd = 1.0
@@ -162,10 +162,10 @@ string function GetSkillStats( entity player ){ // Return a players stats as a s
 }
 
 
-void function StompCheckerThread(){  // check for stompers mid-match
+void function StompCheckerThread(){  //check for stompers
     while(true){
         wait 20
-        if (GameTime_TimeLeftSeconds() > 30 && scoreLimit - 30 > GameRules_GetTeamScore2(TEAM_IMC) && scoreLimit - 30 > GameRules_GetTeamScore2(TEAM_MILITIA)){
+        if ( GetMatchProgress() < 0.93 ){
             printl("[BANHAMMER] CHECKING FOR STOMPS")
             foreach (entity player in GetPlayerArray()){
 
@@ -175,11 +175,11 @@ void function StompCheckerThread(){  // check for stompers mid-match
                     case eSkillState.STOMPER:
                         if (banStompers == 1){
                             ServerCommand("ban " + player.GetUID())
-                            printl("[BANHAMMER] " + player.GetPlayerName() + " (" + GetSkillStats(player) + ") A STOMPER HAS BEEN BANNED")
+                            printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(player) + ") A STOMPER HAS BEEN BANNED")
                         }
                         else{
                             ServerCommand("kickid " + player.GetUID())
-                            printl("[BANHAMMER] " + player.GetPlayerName() + " (" + GetSkillStats(player) + ") A STOMPER HAS BEEN KICKED")
+                            printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(player) + ") A STOMPER HAS BEEN KICKED")
                         }
                         Chat_ServerBroadcast(player.GetPlayerName() + " became ascended!!")
                         break
@@ -204,13 +204,13 @@ void function StompCheckerThread(){  // check for stompers mid-match
     }
 }
 
-void function MessageThread(){ // Send messages to let players know how they are doing during the match
+void function MessageThread(){ // send messages to player that are close to ascending
     while(true){
         wait 20
         if( GetMatchProgress() < 0.78 ){
             wait 30
         }
-        if( GetMatchProgress() < 0.95 && GameTime_TimeLeftSeconds() > 40){
+        if( GetMatchProgress() < 0.93 ){
             printl("[BANHAMMER] DISPLAYING SKILL STATUS TO PLAYERS")
             foreach (entity player in GetPlayerArray()){
                 int skillstate = GetSkillState(player)
@@ -220,24 +220,24 @@ void function MessageThread(){ // Send messages to let players know how they are
                         break
 
                     case eSkillState.ASCENDED:  // send a pilot that has achieved potential ascension a message
-                        printl("[BANHAMMER] " + player.GetPlayerName() + " (" + GetSkillStats(player) + ") A PILOT IS PROBABLY GOING TO BECOME ASCENDED")
+                        printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(player) + ") A PILOT IS PROBABLY GOING TO BECOME ASCENDED")
                         SendHudMessage( player, "You're now very close to ascending! Keep it up, Pilot!!!", -1, 0.31, 255, 255, 255, 255, 0.15, 5, 1 )
                         break
 
                     case eSkillState.CLOSE: // send a pilot that's doing well an encouraging message
-                        printl("[BANHAMMER] " + player.GetPlayerName() + " (" + GetSkillStats(player) + ") A PILOT IS CLOSE TO BECOMING ASCENDED")
+                        printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(player) + ") A PILOT IS CLOSE TO BECOMING ASCENDED")
                         SendHudMessage( player, "You're getting close to ascending!!", -1, 0.31, 255, 255, 255, 255, 0.15, 5, 1 )
                         break
 
                     case eSkillState.GOOD:
-                        printl("[BANHAMMER] " + player.GetPlayerName() + " (" + GetSkillStats(player) + ") A PILOT IS DOING WELL")
+                        printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(player) + ") A PILOT IS DOING WELL")
                         if( GetMatchProgress() < 0.35 ){
                             SendHudMessage( player, "You've got a good start!", -1, 0.31, 255, 255, 255, 255, 0.15, 4, 1 )
                         }
                         break
 
                     case eSkillState.NOOB:
-                        printl("[BANHAMMER] " + player.GetPlayerName() + " (" + GetSkillStats(player) + ")")
+                        printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(player) + ")")
                         break
                 }
             }
@@ -248,7 +248,7 @@ void function MessageThread(){ // Send messages to let players know how they are
     }
 }
 
-void function CongratulationMessage(){ // Send congratulatory message to players at the end of the game, letting them know if they ascended
+void function CongratulationMessage(){ // send congratulatory message to any ascended or nearly ascended pilots
     printl("[BANHAMMER] DISPLAYING FINAL SKILL STATUS TO PLAYERS")
     foreach (entity player in GetPlayerArray()){
         int skillstate = GetSkillState(player)
@@ -278,23 +278,24 @@ void function CongratulationMessage(){ // Send congratulatory message to players
 }
 
 
-void function FinalBanHammer(){ // Process final stats and take any respective actions
+void function FinalBanHammer(){
+    printl("[BANHAMMER] RUNNING FINAL CHECKS AND ENACTING BANS")
     foreach (entity player in GetPlayerArray()){
         int skillstate = GetSkillState(player)
         switch (skillstate){
-            case eSkillState.STOMPER:  // ban/kick stompers
+            case eSkillState.STOMPER:
                 if (banStompers == 1){
                     ServerCommand("ban " + player.GetUID())
-                    printl("[BANHAMMER] " + player.GetPlayerName() + " (" + GetSkillStats(player) + ") A STOMPER HAS BEEN BANNED")
+                    printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(player) + ") A STOMPER HAS BEEN BANNED")
                 }
                 else{
                     ServerCommand("kickid " + player.GetUID())
-                    printl("[BANHAMMER] " + player.GetPlayerName() + " (" + GetSkillStats(player) + ") A STOMPER HAS BEEN KICKED")
+                    printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(player) + ") A STOMPER HAS BEEN KICKED")
                 }
                 Chat_ServerBroadcast(player.GetPlayerName() + " became ascended!!")
                 break
 
-            case eSkillState.ASCENDED:  // ban/kick ascended
+            case eSkillState.ASCENDED:  //ban ascended
                 if (banAscended == 1){
                     ServerCommand("ban " + player.GetUID())
                     printl("[BANHAMMER] ASCENDED PILOT(" + player.GetPlayerName() + " " + player.GetPlayerGameStat(PGS_KILLS) + "/" + player.GetPlayerGameStat(PGS_DEATHS) + ") HAS BEEN BANNED")
