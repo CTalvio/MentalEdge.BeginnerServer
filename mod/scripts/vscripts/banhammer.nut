@@ -3,6 +3,8 @@ global function GetMatchProgress
 
 int banhammerEnable = 1
 
+array<string> HUDcreated = []
+
 int killLimit = 20
 float kdLimit = 1.8
 int stompKillLimit = 30
@@ -52,6 +54,20 @@ void function Playing(){
     printl("[BANHAMMER] ONLINE, PREPARE FOR ASCENSION")
     thread StompCheckerThread()
     thread MessageThread()
+    foreach (entity player in GetPlayerArray()){
+        NSCreateStatusMessageOnPlayer( player, "SKILL", "N/A", "banhammer");
+        HUDcreated.append(player.GetPlayerName())
+        NSSendInfoMessageToPlayer( player, "This server is intended for new and returning players, and automatically bans players who are too high skilled. Have fun!" );
+    }
+    AddCallback_OnPlayerRespawned(OnPlayerSpawned)
+}
+
+void function OnPlayerSpawned(entity player){
+    if (HUDcreated.find(player.GetPlayerName()) == -1){
+        NSCreateStatusMessageOnPlayer( player, "SKILL", "N/A", "banhammer");
+        HUDcreated.append(player.GetPlayerName())
+        NSSendInfoMessageToPlayer( player, "This server is intended for new and returning players, and automatically bans players who are too high skilled. Have fun!" );
+    }
 }
 
 void function Postmatch(){
@@ -66,7 +82,7 @@ enum eSkillState
 {
     NOOB
     GOOD
-    CLOSE
+    GREAT
     ASCENDED
     STOMPER
 }
@@ -132,7 +148,7 @@ int function GetSkillState( entity player ){  // determine and return the curren
     }
     //check if a player is getting close to ascending
     else if( tempkills >= killsClose && tempkd > kdClose && tempassistratio < assistRatioLimit ){
-        return eSkillState.CLOSE
+        return eSkillState.GREAT
     }
     else if( tempkd > stompKdClose ){
         return eSkillState.GOOD
@@ -182,12 +198,13 @@ void function StompCheckerThread(){  //check for stompers
                             printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(player) + ") A STOMPER HAS BEEN KICKED")
                         }
                         Chat_ServerBroadcast(player.GetPlayerName() + " became ascended!!")
+
                         break
 
                     case eSkillState.ASCENDED:
                         break
 
-                    case eSkillState.CLOSE:
+                    case eSkillState.GREAT:
                         break
 
                     case eSkillState.GOOD:
@@ -217,27 +234,28 @@ void function MessageThread(){ // send messages to player that are close to asce
                 switch (skillstate){
 
                     case eSkillState.STOMPER:
+                        NSEditStatusMessageOnPlayer( player, "SKILL", "STOMPER", "banhammer" )
                         break
 
                     case eSkillState.ASCENDED:  // send a pilot that has achieved potential ascension a message
                         printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(player) + ") A PILOT IS PROBABLY GOING TO BECOME ASCENDED")
+                        NSEditStatusMessageOnPlayer( player, "SKILL", "ASCENDED", "banhammer" )
                         SendHudMessage( player, "You're now very close to ascending! Keep it up, Pilot!!!", -1, 0.31, 255, 255, 255, 255, 0.15, 5, 1 )
                         break
 
-                    case eSkillState.CLOSE: // send a pilot that's doing well an encouraging message
+                    case eSkillState.GREAT: // send a pilot that's doing well an encouraging message
                         printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(player) + ") A PILOT IS CLOSE TO BECOMING ASCENDED")
-                        SendHudMessage( player, "You're getting close to ascending!!", -1, 0.31, 255, 255, 255, 255, 0.15, 5, 1 )
+                        NSEditStatusMessageOnPlayer( player, "SKILL", "GREAT", "banhammer" )
                         break
 
                     case eSkillState.GOOD:
                         printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(player) + ") A PILOT IS DOING WELL")
-                        if( GetMatchProgress() < 0.35 ){
-                            SendHudMessage( player, "You've got a good start!", -1, 0.31, 255, 255, 255, 255, 0.15, 4, 1 )
-                        }
+                        NSEditStatusMessageOnPlayer( player, "SKILL", "GOOD", "banhammer" )
                         break
 
                     case eSkillState.NOOB:
                         printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(player) + ")")
+                        NSEditStatusMessageOnPlayer( player, "SKILL", "NOOB", "banhammer" )
                         break
                 }
             }
@@ -262,7 +280,7 @@ void function CongratulationMessage(){ // send congratulatory message to any asc
                 Chat_ServerBroadcast(player.GetPlayerName() + " became ascended!!")
                 break
 
-            case eSkillState.CLOSE:
+            case eSkillState.GREAT:
                 SendHudMessage( player, "You got close to ascending, but didn't quite make it!", -1, 0.35, 255, 255, 255, 255, 0.15, 12, 1 )
                 break
 
@@ -306,7 +324,7 @@ void function FinalBanHammer(){
                 }
                 break
 
-            case eSkillState.CLOSE:
+            case eSkillState.GREAT:
                 break
 
             case eSkillState.GOOD:

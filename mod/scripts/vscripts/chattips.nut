@@ -1,4 +1,4 @@
- global function TipsInit
+global function TipsInit
 
 int chatTipsEnabled = 1
 int tempTipNumber = 0
@@ -65,7 +65,7 @@ array<string> tipList = [
 
 void function TipsThread(){
     while(true){
-        wait 20
+        wait 22
         if(GetMatchProgress() < 0.4){
             tempTipNumber = RandomIntRange( 0, tipList.len() - 1 )
             if( tipList.len() > alreadyUsedTips.len() ){
@@ -81,12 +81,14 @@ void function TipsThread(){
             }
 
             alreadyUsedTips.append(tempTipNumber)
-            Chat_ServerBroadcast("Random tip: " + tipList[tempTipNumber])
+            foreach (entity player in GetPlayerArray()){
+                NSSendInfoMessageToPlayer(player, "Random tip: " + tipList[tempTipNumber])
+            }
             printl("[CHATTIPS] Posted a tip: " + tipList[tempTipNumber])
         }
         else{
             return null
         }
-        wait 100
+        wait 81
     }
 }

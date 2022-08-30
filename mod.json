@@ -1,9 +1,9 @@
 {
    "Name": "MentalEdge.BeginnerServer",
    "Description": "Tools for running a northstar server for beginners",
-   "LoadPriority": 2,
+   "LoadPriority": 5,
    "RequiredOnClient": false,
-   "Version": "1.0.0",
+   "Version": "1.0.1",
 
    "ConVars": [
       {
