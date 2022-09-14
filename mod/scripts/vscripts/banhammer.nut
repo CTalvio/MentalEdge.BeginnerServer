@@ -57,7 +57,7 @@ void function Playing(){
     foreach (entity player in GetPlayerArray()){
         NSCreateStatusMessageOnPlayer( player, "SKILL", "N/A", "banhammer");
         HUDcreated.append(player.GetPlayerName())
-        NSSendInfoMessageToPlayer( player, "This server is intended for new and returning players, and automatically bans players who are too high skilled. Have fun!" );
+        NSSendInfoMessageToPlayer( player, "This server is intended for new and rusty returning players, and automatically bans players going a bit too hard. Have fun!" );
     }
     AddCallback_OnPlayerRespawned(OnPlayerSpawned)
 }
@@ -197,7 +197,7 @@ void function StompCheckerThread(){  //check for stompers
                             ServerCommand("kickid " + player.GetUID())
                             printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(player) + ") A STOMPER HAS BEEN KICKED")
                         }
-                        Chat_ServerBroadcast(player.GetPlayerName() + " became ascended!!")
+                        Chat_ServerBroadcast(player.GetPlayerName() + " became ascended!! Send them off with a salute, o7")
 
                         break
 
@@ -277,7 +277,7 @@ void function CongratulationMessage(){ // send congratulatory message to any asc
 
             case eSkillState.ASCENDED:
                 SendHudMessage( player, "You've ascended!!!! This is goodbye, Pilot.", -1, 0.35, 255, 255, 255, 255, 0.15, 15, 1 )
-                Chat_ServerBroadcast(player.GetPlayerName() + " became ascended!!")
+                Chat_ServerBroadcast(player.GetPlayerName() + " became ascended!!  Send them off with a salute, o7")
                 break
 
             case eSkillState.GREAT:
@@ -310,7 +310,6 @@ void function FinalBanHammer(){
                     ServerCommand("kickid " + player.GetUID())
                     printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(player) + ") A STOMPER HAS BEEN KICKED")
                 }
-                Chat_ServerBroadcast(player.GetPlayerName() + " became ascended!!")
                 break
 
             case eSkillState.ASCENDED:  //ban ascended

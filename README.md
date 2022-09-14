@@ -1,4 +1,4 @@
-# Beginner Server kit
+# Beginner Server Tools
 
 Tools for running and enforcing a server intended for beginners.
 
@@ -8,7 +8,11 @@ In theory, could be tuned for any mode, but testing and presets have been entire
 
 The default mod.json is for Novice level, to use intermediate, rename the second .json file and delete/rename the first. If you want to use convars, or tweak the settings of the mod, convar names and explanations can be found inside the mod.json file.
 
-### 1.0.1
+Using FSU and my BetterTeamBalance mod is highly recommended.
+
+### Changelog
+
+#### 1.0.1
 
 - The mod now uses RUI to display evaluated player skill level in the top right
 - Chat tips are now sent as RUI info messages
@@ -24,3 +28,7 @@ A simple script that will make the server occasionally provide random titanfall 
 ## Statscollector
 
 A truly small brain solution. Barely a "tool". The statscollector, if enable, will post all player details in the server log every ten seconds. This allowed me to graph out and better identify how the detection should work. Techically, you too could use it to tune the banhammer to your liking.
+
+## Team balancing
+
+Search up the BetterTeamBalance mod, also by me.
