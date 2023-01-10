@@ -2,19 +2,21 @@ global function TipsInit
 
 int chatTipsEnabled = 1
 int tempTipNumber = 0
-array<int> alreadyUsedTips = [-1]
+//array<int> alreadyUsedTips = [-1]
+table <entity, array<int> > alreadyUsedForPlayer = {}
 
 void function TipsInit(){
     chatTipsEnabled = GetConVarInt( "bs_chat_tips" )
     if(chatTipsEnabled == 1){
         AddCallback_GameStateEnter( eGameState.Playing, Playing)
+        AddCallback_OnPlayerRespawned( SendTip )
     }
 }
 
 void function Playing(){
     printl("[CHATTIPS] PREPARE FOR INTERESTING TITANFALL FACTS")
     printl("[CHATTIPS] tips available: " + tipList.len())
-    thread TipsThread()
+    //thread TipsThread()
 }
 
 
@@ -26,12 +28,12 @@ array<string> tipList = [
 "You can hack the specters in multiplayer! Get behind them and use your data knife.",
 "Holding a battery will make you easy to spot, even while cloaked.",
 "Give your titan toting team-mates batteries! You get a huge titanfall progress bonus for it!",
-"Enemy team got a lot of titans? Chip away at them using your anti-titan weapon, it will also massively boost your progress towards your own titanfall.",
+"Enemy team got a lot of titans? Chip away at them using your anti-titan weapon, it will also massively boost you towards your own titan.",
 "Anti-titan weapons also work great on reapers!",
 "The mag-launcher works on all metal enemies, that includes Spectres, Stalkers and Reapers!",
 "Wallrunning is faster than sprinting!",
-"Your jump pack is very loud, and the jets are visible while cloaked.",
-"If you are holding the button for an ordnace or pulse blade throw, you can cancel by switching weapons.",
+"Your jump pack is very loud, and the jets will reveal you even if cloaked.",
+"If you are holding the button for an ordnance or pulse blade throw, you can cancel by switching weapons.",
 "Melee a doomed titan to execute it.",
 "Hold melee behind an enemy pilot, to execute them.",
 "All guns can do damage to titans, if you hit their weak spots. They glow red when aiming down sights.",
@@ -63,32 +65,64 @@ array<string> tipList = [
 
 ]
 
-void function TipsThread(){
-    while(true){
-        wait 22
-        if(GetMatchProgress() < 0.4){
-            tempTipNumber = RandomIntRange( 0, tipList.len() - 1 )
-            if( tipList.len() > alreadyUsedTips.len() ){
-                while( alreadyUsedTips.find(tempTipNumber) > 0 ){
-                    tempTipNumber = tempTipNumber + 1
-                    if(tempTipNumber == tipList.len() ){
-                        tempTipNumber = 0
-                    }
-                }
-            }
-            else{
-                printl("[CHATTIPS] All tips posted at least once, now repeating randomly")
-            }
-
-            alreadyUsedTips.append(tempTipNumber)
-            foreach (entity player in GetPlayerArray()){
-                NSSendInfoMessageToPlayer(player, "Random tip: " + tipList[tempTipNumber])
-            }
-            printl("[CHATTIPS] Posted a tip: " + tipList[tempTipNumber])
-        }
-        else{
-            return null
-        }
-        wait 81
+void function SendTip(entity player){
+    if (RandomIntRange( 0, 2 ) > 0 || GetMatchProgress() < 0.5) {
+        return
     }
+
+    if ( !(player in alreadyUsedForPlayer) ){
+        alreadyUsedForPlayer[player] <- [-1]
+    }
+
+    array <int> alreadyUsedTips = alreadyUsedForPlayer[player]
+
+    tempTipNumber = RandomIntRange( 0, tipList.len() - 1 )
+    if( tipList.len() > alreadyUsedTips.len() ){
+        while( alreadyUsedTips.find(tempTipNumber) > 0 ){
+            tempTipNumber = tempTipNumber + 1
+            if(tempTipNumber == tipList.len() ){
+                tempTipNumber = 0
+            }
+        }
+    }
+    else {
+        alreadyUsedTips = [-1]
+        printl("[CHATTIPS] " + player.GetPlayerName() + " has seen all tips, repeating at random.")
+    }
+    alreadyUsedTips.append(tempTipNumber)
+
+    alreadyUsedForPlayer[player] <- alreadyUsedTips
+
+    NSSendInfoMessageToPlayer(player, "Random tip: " + tipList[tempTipNumber])
+    printl("[CHATTIPS] Sent tip to " + player.GetPlayerName() + ": " + tipList[tempTipNumber])
 }
+
+// void function TipsThread(){
+//     while(true){
+//         wait 22
+//         if(GetMatchProgress() < 0.4){
+//             tempTipNumber = RandomIntRange( 0, tipList.len() - 1 )
+//             if( tipList.len() > alreadyUsedTips.len() ){
+//                 while( alreadyUsedTips.find(tempTipNumber) > 0 ){
+//                     tempTipNumber = tempTipNumber + 1
+//                     if(tempTipNumber == tipList.len() ){
+//                         tempTipNumber = 0
+//                     }
+//                 }
+//             }
+//             else{
+//                 printl("[CHATTIPS] All tips posted at least once, now repeating randomly")
+//             }
+//
+//             alreadyUsedTips.append(tempTipNumber)
+//             foreach (entity player in GetPlayerArray()){
+//                 NSSendInfoMessageToPlayer(player, "Random tip: " + tipList[tempTipNumber])
+//             }
+//             printl("[CHATTIPS] Posted a tip: " + tipList[tempTipNumber])
+//         }
+//         else{
+//             return null
+//         }
+//         wait 81
+//     }
+// }

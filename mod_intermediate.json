@@ -8,7 +8,7 @@
    "ConVars": [
       {
          "Name": "bs_chat_tips",
-         "DefaultValue": "1" // If set to 1, the server will occasionally provide random titanfall tips in the chat. You can add your own tips in the respective .nut file. (and remove some that might be specific to my servers)
+         "DefaultValue": "1" // If set to 1, the server will occasionally provide random titanfall tips. You can add your own tips in the respective .nut file. (and remove some that might be specific to my servers)
       },
       {
          "Name": "bs_banhammer",
@@ -56,11 +56,11 @@
       },
       {
          "Name": "bs_ban_ascended",
-         "DefaultValue": "0" // Whether to ban ascended players, if set to 1, ascended players are banned at the ends of matches, If set to 0, they will merely be kicked instead of banned.
+         "DefaultValue": "1" // The number of matches an ascended player is blocked from rejoining.
       },
       {
          "Name": "bs_ban_stompers",
-         "DefaultValue": "1" // Whether to ban stompers, if set to 1, stompers are instabanned when detected. If set to 0, they will merely be kicked instead of banned.
+         "DefaultValue": "4" // The number of matches a stomping player is blocked from rejoining.
       }
    ],
 

@@ -10,12 +10,13 @@ The default mod.json is for Novice level, to use intermediate, rename the second
 
 Using FSU and my BetterTeamBalance mod is highly recommended.
 
-### Changelog
+#### 1.0.2
 
-#### 1.0.1
-
+- Same as 1.0.1
 - The mod now uses RUI to display evaluated player skill level in the top right
-- Chat tips are now sent as RUI info messages
+- Chat tips are now sent as RUI info messages on player respawn
+- No longer uses bans, instead temporarily blocks players from joining the server for a configurable number of matches
+- Stompers are now warned before a being kicked
 
 ## Banhammer
 
