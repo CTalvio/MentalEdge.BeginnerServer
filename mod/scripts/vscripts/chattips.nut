@@ -60,8 +60,7 @@ array<string> tipList = [
 "Firing the Thunderbolt at the general direction of a titan may be enough. Its lightning strikes out and does damage in an area.",
 "The paths of projectiles can be bent by the gravity star.",
 "This server bans players above a certain skill threshold."
-"If you want to avoid ascending, but are close, try learning a new loadout, your skills will diversify.",
-"If a MENTAL server crashes or freezes, it should be back up in 50-70 seconds, restarts are automated."
+"If you want to avoid ascending, but are close, try learning a new loadout, your skills will diversify."
 
 ]
 

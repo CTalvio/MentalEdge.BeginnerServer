@@ -25,6 +25,15 @@ int ascendTitanKillLimit = 1
 float kdSpike = 12.5
 int matchDuration = 900
 
+enum eSkillState
+{
+    NOOB
+    GOOD
+    GREAT
+    ASCENDED
+    STOMPER
+}
+
 void function BanHammerInit(){
 
     banhammerEnable = GetConVarInt( "bs_banhammer" )
@@ -109,16 +118,6 @@ void function Postmatch(){
 void function Epilogue_OnEnter(){
     //CongratulationMessage()
 }
-
-enum eSkillState
-{
-    NOOB
-    GOOD
-    GREAT
-    ASCENDED
-    STOMPER
-}
-
 
 int function GetSettingIntFromConVar(string convar){
  return split(GetConVarString(convar), ",")[0].tointeger()
@@ -269,6 +268,8 @@ void function Thread(){
     while( GetMatchProgress() < 0.97 && GameTime_TimeLeftSeconds() > 15 ){
         printl("[BANHAMMER] DISPLAYING SKILL STATUS TO PLAYERS")
         foreach (entity player in GetPlayerArray()){
+            if(!IsValid(player))
+                break
             int skillstate = GetSkillState(player)
             switch (skillstate){
 
@@ -331,6 +332,8 @@ void function Thread(){
 void function CongratulationMessage(){ // send congratulatory message to any ascended or nearly ascended pilots
     printl("[BANHAMMER] DISPLAYING FINAL SKILL STATUS TO PLAYERS")
     foreach (entity player in GetPlayerArray()){
+        if(!IsValid(player))
+            break
         int skillstate = GetSkillState(player)
         switch (skillstate){
 
@@ -361,6 +364,8 @@ void function CongratulationMessage(){ // send congratulatory message to any asc
 void function FinalBanHammer(){
     printl("[BANHAMMER] RUNNING FINAL CHECKS AND ENACTING BANS")
     foreach (entity player in GetPlayerArray()){
+        if(!IsValid(player))
+            break
         int skillstate = GetSkillState(player)
         switch (skillstate){
             case eSkillState.STOMPER:

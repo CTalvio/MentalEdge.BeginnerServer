@@ -3,7 +3,7 @@
    "Description": "Tools for running a northstar server for beginners",
    "LoadPriority": 2,
    "RequiredOnClient": false,
-   "Version": "1.0.1",
+   "Version": "1.0.3",
 
    "ConVars": [
       {

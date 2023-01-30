@@ -1,0 +1,7 @@
+{
+    "name": "BeginnerServerTools",
+    "version_number": "1.0.3",
+    "website_url": "https://github.com/CTalvio/MentalEdge.BeginnerServer",
+    "description": "A set of tools for running and enforcing a server intended for players new to Northstar, or Titanfall in general.",
+    "dependencies": []
+}
