@@ -3,28 +3,6 @@ global function GetMatchProgress
 
 int banhammerEnable = 1
 
-array<string> HUDcreated = []
-array<string> GreatPlayers = []
-array<string> Ascended = []
-array<string> Stompers = []
-array<string> BannedAscended = []
-array<string> BannedStompers = []
-
-int killLimit = 20
-float kdLimit = 1.8
-int stompKillLimit = 30
-float stompKdLimit = 3.2
-int stompMinimumKills = 8
-float killsClose = 1.0
-float kdClose = 1.0
-float stompKdClose = 1.0
-int scoreLimit = 650
-float assistRatioLimit = 0.3
-int stompTitanKillLimit = 1
-int ascendTitanKillLimit = 1
-float kdSpike = 12.5
-int matchDuration = 900
-
 enum eSkillState
 {
     NOOB
@@ -34,8 +12,34 @@ enum eSkillState
     STOMPER
 }
 
-void function BanHammerInit(){
+struct statSet {
+    float kills
+    float killsAsTitan
+    float deaths
+    float time
+}
 
+table <string, statSet> PlayerStats
+array <string> HUDcreated
+array <string> GreatPlayers
+array <string> Ascended
+array <string> Stompers
+array <string> BannedAscended
+array <string> BannedStompers
+table <string, float> RepeatAscenders
+
+int killLimit = 20
+float kdLimit = 1.8
+int stompKillLimit = 30
+float stompKdLimit = 3.2
+int stompMinimumKills = 8
+float stompKdClose = 1.0
+int scoreLimit = 650
+float kdSpike = 12.5
+int matchDuration = 900
+
+
+void function BanHammerInit(){
     banhammerEnable = GetConVarInt( "bs_banhammer" )
     killLimit = GetConVarInt( "bs_kill_limit" )
     kdLimit = GetConVarFloat( "bs_kd_limit" )
@@ -43,37 +47,44 @@ void function BanHammerInit(){
     stompKdLimit = GetConVarFloat( "bs_stompkd_limit" )
     kdSpike = GetConVarFloat( "bs_kd_maxspike" ) - stompKdLimit
     stompMinimumKills = GetConVarInt( "bs_minimumkills" )
-    assistRatioLimit = GetConVarFloat( "bs_assistratio" )
-    stompTitanKillLimit = GetConVarInt( "bs_stomptitankill_limit" )
-    ascendTitanKillLimit = GetConVarInt( "bs_ascendtitankill_limit" )
-    killsClose = killLimit * 0.75
-    kdClose = kdLimit * 0.75
     stompKdClose = stompKdLimit * 0.8
     scoreLimit = GameMode_GetScoreLimit( "aitdm" )
-    matchDuration = GameTime_TimeLeftSeconds()
     if(banhammerEnable == 1){
 
         printl("[BANHAMMER] INITIALIZING")
         AddCallback_GameStateEnter( eGameState.Postmatch, Postmatch )
         AddCallback_GameStateEnter( eGameState.Playing, Playing )
         AddCallback_GameStateEnter( eGameState.Epilogue, Epilogue_OnEnter )
-    }
 
-    UpdateBans("bs_ban_ascended")
-    UpdateBans("bs_ban_stompers")
-    BannedAscended = GetSecondaryArrayFromConVar("bs_ban_ascended", 0)
-    BannedStompers = GetSecondaryArrayFromConVar("bs_ban_stompers", 0)
+        AddCallback_OnClientConnecting( OnPlayerConnecting )
+        AddCallback_OnClientConnected( OnPlayerConnected )
+
+        AddCallback_OnClientConnected( CreatePlayerDetails )
+        AddCallback_OnPlayerKilled( UpdatePlayerDetails )
+
+        UpdateBans("bs_ban_ascended")
+        UpdateBans("bs_ban_stompers")
+        LoadRepeatAscenders()
+        BannedAscended = GetSecondaryArrayFromConVar("bs_ban_ascended", 0)
+        BannedStompers = GetSecondaryArrayFromConVar("bs_ban_stompers", 0)
+    }
+}
+
+void function Playing(){
+    printl("[BANHAMMER] ONLINE, PREPARE FOR ASCENSION")
+    thread Thread()
+    AddCallback_OnPlayerRespawned(OnPlayerSpawned)
+    matchDuration = GameTime_TimeLeftSeconds()
 }
 
 void function UpdateBans(string convar){
     array <string> kicked = GetSecondaryArrayFromConVar(convar, 0)
     array <string> kickedfor = GetSecondaryArrayFromConVar(convar, 1)
-    int kickDuration = GetSettingIntFromConVar(convar)
 
     for(int i = kickedfor.len()-1; i > -1; i--){
-        kickedfor.insert(i, (kickedfor[i].tointeger()+1).tostring())
+        kickedfor.insert(i, (kickedfor[i].tointeger()-1).tostring())
         kickedfor.remove(i+1)
-        if(kickedfor[i].tointeger() > kickDuration){
+        if(kickedfor[i].tointeger() <= 0){
             kickedfor.remove(i)
             kicked.remove(i)
         }
@@ -87,18 +98,36 @@ void function UpdateBans(string convar){
     SaveArrayToConVar(convar, newKickedArray)
 }
 
-void function Playing(){
-    printl("[BANHAMMER] ONLINE, PREPARE FOR ASCENSION")
-    thread Thread()
-    AddCallback_OnPlayerRespawned(OnPlayerSpawned)
-    AddCallback_OnClientConnected(OnPlayerConnected)
+
+void function LoadRepeatAscenders(){
+    foreach( item in GetArrayFromConVar( "bs_repeat_ascenders" ) ){
+        array <string> split = split(item, "-")
+        if( split[1].tofloat() > 0.1 )
+            RepeatAscenders[split[0]] <- split[1].tofloat() - 0.002
+    }
+}
+
+void function SaveRepeatAscenders(){
+    array <string> convarSave
+    foreach( key, value in RepeatAscenders ){
+        convarSave.append( key + "-" + value )
+    }
+    SaveArrayToConVar("bs_repeat_ascenders", convarSave)
+}
+
+void function OnPlayerConnecting(entity player) {
+    if ( BannedAscended.contains(player.GetUID()) ) {
+        NSDisconnectPlayer(player, "You ascended! You cannot play on the server for a while")
+        return
+    }
+    if ( BannedStompers.contains(player.GetUID()) ) {
+        NSDisconnectPlayer(player, "Your ban for stomping on the beginners has not expired")
+        return
+    }
 }
 
 void function OnPlayerConnected(entity player) {
-    if (BannedAscended.contains(player.GetUID()) || BannedStompers.contains(player.GetUID())) {
-        ServerCommand("kickid " + player.GetUID())
-    }
-    else if (HUDcreated.find(player.GetPlayerName()) != -1){
+    if (HUDcreated.find(player.GetPlayerName()) != -1){
         NSCreateStatusMessageOnPlayer( player, "SKILL", "N/A", "banhammer")
     }
 }
@@ -107,7 +136,35 @@ void function OnPlayerSpawned(entity player){
     if (HUDcreated.find(player.GetPlayerName()) == -1){
         NSCreateStatusMessageOnPlayer( player, "SKILL", "N/A", "banhammer")
         HUDcreated.append(player.GetPlayerName())
-        NSSendInfoMessageToPlayer( player, "This server is intended for new and rusty returning players, and automatically bans players going a bit too hard. Have fun!" );
+        thread TipThread( player )
+    }
+}
+
+void function TipThread(entity player){
+    wait 1.5
+    NSSendInfoMessageToPlayer( player, "This server is intended for new and rusty returning players, and automatically bans players going a bit too hard. Have fun!" )
+}
+
+void function CreatePlayerDetails( entity player ){
+    if( player.GetUID() in PlayerStats )
+        return
+    else{
+        statSet blank
+        PlayerStats[player.GetUID()] <- clone blank
+    }
+}
+
+void function UpdatePlayerDetails( entity victim, entity attacker, var damageInfo){
+    try{
+        if( attacker.IsPlayer() && victim.IsPlayer() && attacker != victim ){
+            if( attacker.IsTitan() )
+                PlayerStats[attacker.GetUID()].killsAsTitan += 1
+            else
+                PlayerStats[attacker.GetUID()].kills += 1
+            PlayerStats[victim.GetUID()].deaths += 1
+        }
+    }
+    catch(error){
     }
 }
 
@@ -164,26 +221,19 @@ float function GetMatchProgress(){
     return tempScoreProgress2
 }
 
-float function GetPlayerKDLimit( entity player ){  // Get a players unique KD spike cap, based on their number of player interactions
-    int kills = player.GetPlayerGameStat(PGS_KILLS)
-    int deaths = player.GetPlayerGameStat(PGS_DEATHS)
-    int assists = player.GetPlayerGameStat(PGS_ASSISTS)
-    int aggregatedKda = kills + deaths + assists
-    if(aggregatedKda < 30){
-        float playerProgress = 1.0 * aggregatedKda / 30
-        float invertProgress = 1.0 - pow(playerProgress,1.5)
-        return kdSpike * invertProgress + stompKdLimit
-    }
-    return stompKdLimit
-}
-
-
-int function GetSkillState( entity player ){  // determine and return the current skill bracket of a player
-    float tempkills = 1.0 * player.GetPlayerGameStat(PGS_KILLS)
-    float tempdeaths = 1.0 * player.GetPlayerGameStat(PGS_DEATHS)
-    float tempassistratio = player.GetPlayerGameStat(PGS_ASSISTS) / tempkills
-    int temptitankills = player.GetPlayerGameStat(PGS_TITAN_KILLS)
+int function GetSkillState( string puid ){ // determine and return the current skill bracket of a player
+    float tempkills = ( PlayerStats[puid].kills * 1.25 ) + ( PlayerStats[puid].killsAsTitan * 0.5 )
+    float tempdeaths = PlayerStats[puid].deaths
+    float kdspikelimit = stompKdLimit
+    float percentagepresent = PlayerStats[puid].time.tofloat() / matchDuration
+    if ( percentagepresent < 0.5 )
+        kdspikelimit = (kdSpike * (1.0 - pow(percentagepresent*2,1.5))) + stompKdLimit
     float tempkd = 1.0
+
+    if( puid in RepeatAscenders ){
+        tempkills += RepeatAscenders[puid]
+    }
+
     if(tempdeaths > 0 && tempkills > 0){
         tempkd = tempkills / tempdeaths
     }
@@ -194,24 +244,27 @@ int function GetSkillState( entity player ){  // determine and return the curren
         tempkd = 0.5
     }
     //Stompers
-    if( tempkills >= stompMinimumKills && tempkd > GetPlayerKDLimit(player) && temptitankills >= stompTitanKillLimit && tempassistratio < assistRatioLimit ){
+    // if KD too high
+    if( tempkills >= stompMinimumKills && tempkd > kdspikelimit ){
         return eSkillState.STOMPER
     }
-    else if( tempkills >= stompMinimumKills && tempkills >= stompKillLimit * pow(GetMatchProgress(),0.4) && temptitankills >= stompTitanKillLimit && tempassistratio < assistRatioLimit  ){
+    // if too many kills too early
+    else if( tempkills >= stompMinimumKills && tempkills >= ((stompKillLimit-2)*pow(percentagepresent,0.5))+2 && tempkd >= 1.6 ){
         return eSkillState.STOMPER
     }
-    else if( tempkills >= stompKillLimit && tempkd >= 1.4 ){
+    // if too many kills
+    else if( tempkills >= stompKillLimit && tempkd >= 1.6 ){
         return eSkillState.STOMPER
     }
     //Ascended players
-    else if( tempkills >= killLimit && tempkd > kdLimit && temptitankills >= ascendTitanKillLimit && tempassistratio < assistRatioLimit ){
+    else if( tempkills >= killLimit && tempkd > kdLimit ){
         return eSkillState.ASCENDED
     }
     //check if a player is getting close to ascending
-    else if( tempkills >= killsClose && tempkd > kdClose && tempassistratio < assistRatioLimit ){
+    else if( tempkills >= ((killLimit-2)*pow(percentagepresent,0.5) *0.8)+2 && tempkd > kdLimit *0.8 || tempkills > ((killLimit-2)*pow(percentagepresent,0.5))+2 || tempkd > kdspikelimit*0.8 ){
         return eSkillState.GREAT
     }
-    else if( tempkd > stompKdClose ){
+    else if( tempkills >= ((killLimit-2)*pow(percentagepresent,0.5) *0.7)+2 || tempkd > kdLimit *0.7 ){
         return eSkillState.GOOD
     }
     //mark the rest as noob
@@ -219,14 +272,21 @@ int function GetSkillState( entity player ){  // determine and return the curren
 }
 
 
-string function ReturnSkillStats( entity player ){ // Return a players stats as a string
-    float tempkills = 1.0 * player.GetPlayerGameStat(PGS_KILLS)
-    float tempdeaths = 1.0 * player.GetPlayerGameStat(PGS_DEATHS)
+string function ReturnSkillStats( string puid ){ // Return a players stats as a string
+    float tempkills = PlayerStats[puid].kills
+    float astitankills = PlayerStats[puid].killsAsTitan
+    float weightedkills = ( PlayerStats[puid].kills * 1.25 ) + ( PlayerStats[puid].killsAsTitan * 0.5 )
+    float tempdeaths = PlayerStats[puid].deaths
+    float percentagepresent = PlayerStats[puid].time.tofloat() / matchDuration
+    float killRateLimit = ((stompKillLimit-2)*pow(percentagepresent,0.5))+2
+    float kdspikelimit = stompKdLimit
+    if ( percentagepresent < 0.5 )
+        kdspikelimit = (kdSpike * (1.0 - pow(percentagepresent*2,1.5))) + stompKdLimit
     float tempkd = 1.0
-    int tempassists = player.GetPlayerGameStat(PGS_ASSISTS)
-    int temptitankills = player.GetPlayerGameStat(PGS_TITAN_KILLS)
+    float weightedkd = 0.0
     if(tempdeaths > 0 && tempkills > 0){
         tempkd = tempkills / tempdeaths
+        weightedkd = weightedkills / tempdeaths
     }
     else if( tempkills > 0 ){
         tempkd = tempkills / 0.8
@@ -234,43 +294,117 @@ string function ReturnSkillStats( entity player ){ // Return a players stats as 
     else{
         tempkd = 0.5
     }
-    string killdeathkdtext = "K:"+ tempkills +"/D:"+ tempdeaths +"/A:"+ tempassists +"/T:"+ temptitankills +"/KD:"+ tempkd
+    string killdeathkdtext = "K:"+ tempkills +"/TK:"+ astitankills +"/D:"+ tempdeaths +"/WKD:"+ weightedkd +"/KD:"+ tempkd +"/KDSL:"+ kdspikelimit +"/KL:"+ killRateLimit
     return killdeathkdtext
 }
 
-
-void function WatchStomper(entity player){
+void function WatchStomper(string puid, int team){
+    printl("[BANHAMMER] A POTENTIAL STOMPER IS BEING WATCHED")
     wait 50
 
-    if( IsValid(player) ){
-        if( GetSkillState(player) == eSkillState.STOMPER ){
-            BannedStompers.append(player.GetUID())
-            array <string> saveToConvar = GetArrayFromConVar("bs_ban_stompers")
-            saveToConvar.append(player.GetUID() + "-0")
-            SaveArrayToConVar("bs_ban_stompers", saveToConvar)
-            ServerCommand("kickid " + player.GetUID())
-            printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(player) + ") A STOMPER HAS BEEN DETECTED AND BANNED")
-            Chat_ServerBroadcast(player.GetPlayerName() + " became ascended!! Send them off with a salute, o7")
+    while( true ){
+        bool present = false
+        foreach( player in GetPlayerArray() )
+            if( player.GetUID() == puid )
+                present = true
+        if(!present){
+            BanStomper( puid )
+            return
         }
+
+        int own = GetPlayerArrayOfTeam(team).len()
+        int other = GetPlayerArrayOfTeam(GetOtherTeam(team)).len()
+        if( GetSkillState( puid ) == eSkillState.STOMPER && own >= other ){
+            BanStomper( puid )
+            return
+        }else if( GetSkillState( puid ) != eSkillState.STOMPER ){
+            return
+        }
+
+        wait 10
     }
 
     return
 }
 
+void function BanStomper( string puid ){
+    foreach( p in GetPlayerArray() ){
+        if( p.GetUID() == puid ){
+            entity player = p
+            array <string> saveToConvar = GetArrayFromConVar("bs_ban_stompers")
+            BannedStompers.append(puid)
+            printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(puid) + ") A STOMPER HAS BEEN BANNED")
+            Chat_ServerBroadcast(player.GetPlayerName() + " became ascended!! Send them off with a salute, o7")
+
+            if( puid in RepeatAscenders ){
+                printl("[BANHAMMER] " + player.GetPlayerName() + " HAS BEEN SEEN STOMPING BEFORE, BAN DURATON EXTENDED")
+                saveToConvar.append( puid + "-" + ( GetSettingIntFromConVar("bs_ban_stompers") + RepeatAscenders[player.GetUID()] + 1 ) )
+                SaveArrayToConVar("bs_ban_stompers", saveToConvar)
+                RepeatAscenders[puid] *= GetConVarFloat("bs_repeat_ascenders")
+                RepeatAscenders[puid] += 0.5
+                NSDisconnectPlayer(player, "You have been temporarily banned for stomping on this beginner server. As this is not your first time, the ban duration has been increased")
+            }else{
+                saveToConvar.append( puid + "-" + GetSettingIntFromConVar("bs_ban_stompers") )
+                SaveArrayToConVar("bs_ban_stompers", saveToConvar)
+                RepeatAscenders[puid] <- 0.5
+                NSDisconnectPlayer(player, "You have been temporarily banned for stomping on this beginner server")
+            }
+            return
+        }
+    }
+    // Ban the offender even if they left trying to escape the ban
+    array <string> saveToConvar = GetArrayFromConVar("bs_ban_stompers")
+    BannedStompers.append(puid)
+    printl("[BANHAMMER] " + puid + " (" + ReturnSkillStats(puid) + ") A STOMPER HAS BEEN BANNED")
+    if( puid in RepeatAscenders ){
+        printl("[BANHAMMER] " + puid + " HAS BEEN SEEN STOMPING BEFORE, BAN DURATON EXTENDED")
+        saveToConvar.append( puid + "-" + ( GetSettingIntFromConVar("bs_ban_stompers") + RepeatAscenders[puid] + 1 ) )
+        SaveArrayToConVar("bs_ban_stompers", saveToConvar)
+        RepeatAscenders[puid] *= GetConVarFloat("bs_repeat_ascenders")
+        RepeatAscenders[puid] += 0.5
+    }else{
+        saveToConvar.append( puid + "-" + GetSettingIntFromConVar("bs_ban_stompers") )
+        SaveArrayToConVar("bs_ban_stompers", saveToConvar)
+        RepeatAscenders[puid] <- 0.5
+    }
+}
+
+void function BanAscended( entity player ){
+    array <string> saveToConvar = GetArrayFromConVar("bs_ban_ascended")
+    BannedAscended.append(player.GetUID())
+    printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(player.GetUID()) + ") A PLAYER HAS ASCENDED")
+
+    if( player.GetUID() in RepeatAscenders ){
+        printl("[BANHAMMER] " + player.GetPlayerName() + " HAS ASCENDED BEFORE, BAN DURATON EXTENDED")
+        saveToConvar.append( player.GetUID() + "-" + ( GetSettingIntFromConVar("bs_ban_ascended") + RepeatAscenders[player.GetUID()] + 1 ) )
+        SaveArrayToConVar("bs_ban_ascended", saveToConvar)
+
+        RepeatAscenders[player.GetUID()] += GetConVarFloat("bs_repeat_ascenders") / 2
+        NSDisconnectPlayer(player, "You have become ascended! You are now temporarily banned from playing on the beginner server. As this is not your first time, the ban duration has been increased")
+    }else{
+        saveToConvar.append( player.GetUID() + "-" + GetSettingIntFromConVar("bs_ban_ascended") )
+        SaveArrayToConVar("bs_ban_ascended", saveToConvar)
+
+        RepeatAscenders[player.GetUID()] <- 0.5
+        NSDisconnectPlayer(player, "You have become ascended! You are now temporarily banned from playing on the beginner server")
+    }
+}
+
 void function Thread(){
     wait 2
     foreach (entity player in GetPlayerArray()){
-        NSCreateStatusMessageOnPlayer( player, "SKILL", "N/A", "banhammer");
+        NSCreateStatusMessageOnPlayer( player, "SKILL", "N/A", "banhammer")
         HUDcreated.append(player.GetPlayerName())
-        NSSendInfoMessageToPlayer( player, "This server is intended for new and rusty returning players, and automatically bans players going a bit too hard. Have fun!" );
+        NSSendInfoMessageToPlayer( player, "This server is intended for new and rusty returning players, and automatically bans players going a bit too hard. Have fun!" )
     }
     wait 10
-    while( GetMatchProgress() < 0.97 && GameTime_TimeLeftSeconds() > 15 ){
+    while( GetMatchProgress() < 0.99 && GameTime_TimeLeftSeconds() > 10 ){
         printl("[BANHAMMER] DISPLAYING SKILL STATUS TO PLAYERS")
         foreach (entity player in GetPlayerArray()){
             if(!IsValid(player))
                 break
-            int skillstate = GetSkillState(player)
+            PlayerStats[player.GetUID()].time += 10
+            int skillstate = GetSkillState(player.GetUID())
             switch (skillstate){
 
                 case eSkillState.STOMPER:
@@ -278,12 +412,12 @@ void function Thread(){
                     if (Stompers.find(player.GetPlayerName()) == -1){
                         Stompers.append(player.GetPlayerName())
                         NSSendInfoMessageToPlayer( player, "Uh oh... You seem to be stomping on the server. Please chill out, or the server may ban you." );
-                        WatchStomper(player)
+                        WatchStomper( player.GetUID(), player.GetTeam() )
                     }
                     break
 
                 case eSkillState.ASCENDED:
-                    printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(player) + ") A PILOT IS PROBABLY GOING TO BECOME ASCENDED")
+                    printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(player.GetUID()) + ") A PILOT IS PROBABLY GOING TO BECOME ASCENDED")
                     NSEditStatusMessageOnPlayer( player, "SKILL", "ASCENDED (BAN)", "banhammer" )
                     if (Ascended.find(player.GetPlayerName()) == -1){
                         Ascended.append(player.GetPlayerName())
@@ -295,7 +429,7 @@ void function Thread(){
                     break
 
                 case eSkillState.GREAT:
-                    printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(player) + ") A PILOT IS CLOSE TO BECOMING ASCENDED")
+                    printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(player.GetUID()) + ") A PILOT IS CLOSE TO BECOMING ASCENDED")
                     NSEditStatusMessageOnPlayer( player, "SKILL", "GREAT", "banhammer" )
                     if (GreatPlayers.find(player.GetPlayerName()) == -1){
                         GreatPlayers.append(player.GetPlayerName())
@@ -307,7 +441,7 @@ void function Thread(){
                     break
 
                 case eSkillState.GOOD:
-                    printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(player) + ") A PILOT IS DOING WELL")
+                    printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(player.GetUID()) + ") A PILOT IS DOING WELL")
                     NSEditStatusMessageOnPlayer( player, "SKILL", "GOOD", "banhammer" )
                     if(Stompers.find(player.GetPlayerName()) > -1){
                         Stompers.remove(Stompers.find(player.GetPlayerName()))
@@ -315,7 +449,7 @@ void function Thread(){
                     break
 
                 case eSkillState.NOOB:
-                    printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(player) + ")")
+                    printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(player.GetUID()) + ")")
                     NSEditStatusMessageOnPlayer( player, "SKILL", "SAFE", "banhammer" )
                     if(Stompers.find(player.GetPlayerName()) > -1){
                         Stompers.remove(Stompers.find(player.GetPlayerName()))
@@ -325,16 +459,15 @@ void function Thread(){
         }
         wait 10
     }
-    wait GameTime_TimeLeftSeconds() - 5
     CongratulationMessage()
 }
 
 void function CongratulationMessage(){ // send congratulatory message to any ascended or nearly ascended pilots
-    printl("[BANHAMMER] DISPLAYING FINAL SKILL STATUS TO PLAYERS")
+    //printl("[BANHAMMER] DISPLAYING FINAL SKILL STATUS TO PLAYERS")
     foreach (entity player in GetPlayerArray()){
         if(!IsValid(player))
             break
-        int skillstate = GetSkillState(player)
+        int skillstate = GetSkillState(player.GetUID())
         switch (skillstate){
 
             case eSkillState.STOMPER:
@@ -366,25 +499,15 @@ void function FinalBanHammer(){
     foreach (entity player in GetPlayerArray()){
         if(!IsValid(player))
             break
-        int skillstate = GetSkillState(player)
+        int skillstate = GetSkillState(player.GetUID())
         switch (skillstate){
             case eSkillState.STOMPER:
-                BannedStompers.append(player.GetUID())
-                array <string> saveToConvar = GetArrayFromConVar("bs_ban_stompers")
-                saveToConvar.append(player.GetUID() + "-0")
-                SaveArrayToConVar("bs_ban_stompers", saveToConvar)
-                ServerCommand("kickid " + player.GetUID())
-                printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(player) + ") A STOMPER HAS BEEN BANNED")
+                BanStomper( player.GetUID() )
 
                 break
 
             case eSkillState.ASCENDED:  //ban ascended
-                BannedAscended.append(player.GetUID())
-                array <string> saveToConvar = GetArrayFromConVar("bs_ban_ascended")
-                saveToConvar.append(player.GetUID() + "-0")
-                SaveArrayToConVar("bs_ban_ascended", saveToConvar)
-                ServerCommand("kickid " + player.GetUID())
-                printl("[BANHAMMER] " + player.GetPlayerName() + " (" + ReturnSkillStats(player) + ") A PLAYER HAS ASCENDED")
+                BanAscended( player )
 
                 break
 
@@ -399,4 +522,5 @@ void function FinalBanHammer(){
         }
     }
     printl("[BANHAMMER] ALL DONE")
+    SaveRepeatAscenders()
 }

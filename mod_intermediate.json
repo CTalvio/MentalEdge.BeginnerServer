@@ -3,7 +3,7 @@
    "Description": "Tools for running a northstar server for beginners",
    "LoadPriority": 2,
    "RequiredOnClient": false,
-   "Version": "1.0.3",
+   "Version": "2.0.2",
 
    "ConVars": [
       {
@@ -36,31 +36,23 @@
       },
       {
          "Name": "bs_kd_maxspike",
-         "DefaultValue": "16" // The maximum KD spike allowed early-game, as KD calculation is less accurate at the beginning of a match. Increase to reduce false positives, reduce to ban potential stompers earlier. Note that this value will reduce as the match goes on (though not for players than join late-game), and the treshold where the banhammer will activate will approach the hard limit configured above.
+         "DefaultValue": "12" // The maximum KD spike allowed. Should be fairly high so a as to avoid banning someone getting a titan early and thereby racking up kills without any deaths.
       },
       {
          "Name": "bs_minimumkills",
          "DefaultValue": "8" // Minimum number of kills required before any banhammer action. Increase this to reduce early game or mid game join false positives.
       },
       {
-         "Name": "bs_assistratio",
-         "DefaultValue": "0.4" // Assist ratio treshold (Assists/Kills), for the banhammer to act, a player has to be below it. This reduces false positives as high skill players generally get the kills they go for, and therefore have few assists. Increase for more bans, reduce for less.
-      },
-      {
-         "Name": "bs_stomptitankill_limit",
-         "DefaultValue": "1" // Minimum amount of titan kills required for a stomper ban. Reduces false positives.
-      },
-      {
-         "Name": "bs_ascendtitankill_limit",
-         "DefaultValue": "2" // Minimum amount of titan kills required for an ascension. Lets an othewise skilled player stick around and practice, if they don't quite have titans figured out yet.
-      },
-      {
          "Name": "bs_ban_ascended",
-         "DefaultValue": "1" // The number of matches an ascended player is blocked from rejoining.
+         "DefaultValue": "2" // The number of matches an ascended player is blocked from rejoining.
       },
       {
          "Name": "bs_ban_stompers",
-         "DefaultValue": "4" // The number of matches a stomping player is blocked from rejoining.
+         "DefaultValue": "6" // The number of matches a stomping player is blocked from rejoining.
+      },
+      {
+         "Name": "bs_repeat_ascenders",
+         "DefaultValue": "2" // Severity of the exponential bans issued to repeat offenders. 2 means that each time the same player gets themselves banned, the added ban duration doubles. (does not start from doubling the base ban duration)
       }
    ],
 

@@ -40,17 +40,17 @@ array<string> tipList = [
 "The pulse blade can instakill. It can also be destroyed.",
 "A very short grapple does not use up a charge.",
 "Firestars can ignite Scorchs incendiary trap.",
-"Satchel charges can be stuck to titans, and do massive damage.",
+"Satchel charges can be stuck to titans, and do massive damage. They are also great against reapers.",
 "Eject before your titan becomes doomed, by pressing X, then triple tap E as normal.",
 "Grapple the ground when ejecting, to avoid flying high and becoming an easy target.",
 "You can change aim and crouch to hold, instead of toggle in keybindings.",
 "Charging Ions laser shot does no extra damage.",
-"Turrets can be instantly destroyed by melee.",
+"Turrets instantly be destroyed by a melee attack.",
 "Ions shield can return damage, don't feed her! It can also block the arc wave and flame wall.",
 "The heat shield does more damage than melee.",
 "Scorch can throw his traps over Tones particle wall.",
 "Tones particle wall is directional. Anyone, even the enemy team, can use it if behind it.",
-"Tones missiles can be fired around corners.",
+"Tones missiles can be fired around corners and over buildings.",
 "Legions predator cannon consumes twice the ammo in long range mode.",
 "Watch out for the lock-on indicator! Turn to deal with the threat if it appears.",
 "Smoke can be used to put out fires.",
@@ -59,19 +59,18 @@ array<string> tipList = [
 "The smart pistol ignores holo-pilot holograms.",
 "Firing the Thunderbolt at the general direction of a titan may be enough. Its lightning strikes out and does damage in an area.",
 "The paths of projectiles can be bent by the gravity star.",
-"This server bans players above a certain skill threshold."
+"This server bans players above a certain skill threshold.",
 "If you want to avoid ascending, but are close, try learning a new loadout, your skills will diversify."
 
 ]
 
 void function SendTip(entity player){
-    if (RandomIntRange( 0, 2 ) > 0 || GetMatchProgress() < 0.5) {
+    if( GetGameState() != eGameState.Playing )
         return
-    }
-
-    if ( !(player in alreadyUsedForPlayer) ){
+    if( RandomIntRange( 0, 2 ) == 0 || GetMatchProgress() < 0.5)
+        return
+    if( !(player in alreadyUsedForPlayer) )
         alreadyUsedForPlayer[player] <- [-1]
-    }
 
     array <int> alreadyUsedTips = alreadyUsedForPlayer[player]
 
